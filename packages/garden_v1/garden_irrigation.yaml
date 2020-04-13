@@ -1,4 +1,3 @@
-
 #==============
 #=== Customize
 #==============
@@ -36,7 +35,6 @@ automation:
       - platform: state
         entity_id:
           - input_select.cycle1_watering_days
-          - input_select.cycle2_watering_days
     
     action:
       - service: input_datetime.set_datetime
@@ -398,7 +396,7 @@ script:
 
       #=== Turn off schedule if run 'Once' selected
       - service_template: >
-            {% if states('input_select.cycle' + cycle + '_watering_days') == 'Once' %}
+            {% if states('input_select.cycle' + (cycle | string) + '_watering_days') == 'Once' %}
               input_boolean.turn_off
             {% else %}
               input_boolean.turn_on
@@ -419,15 +417,15 @@ script:
       #=== Don't continue if switch is unavailable
       - condition: template
         value_template: >
-          {{ states('switch.zone' + zone + '_valve') != 'unavailable' }}
+          {{ states('switch.zone' + (zone | string) + '_valve') != 'unavailable' }}
 
       #=== Don't continue if duration is zero
       - condition: template
         value_template: >
-            {% if is_state('input_boolean.cycle' + cycle + '_use_weather_adjustment', 'on') %}
-              {% set n = states('input_number.adjusted_cycle' + cycle + '_zone' + zone + '_duration')  | int %}
+            {% if is_state('input_boolean.cycle' + (cycle | string) + '_use_weather_adjustment', 'on') %}
+              {% set n = states('input_number.adjusted_cycle' + (cycle | string) + '_zone' + (zone | string) + '_duration')  | int %}
             {% else %}
-              {% set n = states('input_number.cycle' + cycle + '_zone' + zone + '_duration')  | int %}
+              {% set n = states('input_number.cycle' + (cycle | string) + '_zone' + (zone | string) + '_duration')  | int %}
             {% endif %}
             {{ n != 0 }}
           
@@ -455,20 +453,20 @@ script:
         data_template:
           entity_id: timer.cycle{{ cycle }}_zone_duration
           duration: >
-            {% if is_state('input_boolean.cycle' + cycle + '_use_weather_adjustment', 'on') %}
-              {% set adj_duration = states('input_number.adjusted_cycle1_zone1_duration') | float %}
+            {% if is_state('input_boolean.cycle' + (cycle | string) + '_use_weather_adjustment', 'on') %}
+              {% set adj_duration = states('input_number.adjusted_cycle' + (cycle | string) + '_zone' + ( zone | string ) + '_duration') | float %}
               {% set mins = (adj_duration // 1) | round(0, floor) %}
               {% set secs = ((adj_duration - mins) * 60) | round %}
               00:{{ '%02i' | format(mins) }}:{{ '%02i' | format(secs) }}
             {% else %}
-              {% set duration = states('input_number.cycle1_zone1_duration') | float %}
+              {% set duration = states('input_number.cycle' + (cycle | string) +'_zone' + ( zone | string) + '_duration') | float %}
               {% set mins = (duration // 1) | round(0, floor) %}
               {% set secs = ((duration - mins) * 60) | round %}
               00:{{ '%02i' | format(mins) }}:{{ '%02i' | format(secs) }}
             {% endif %}
 
       - wait_template: >
-          {% set entity = 'timer.cycle' + cycle + '_zone_duration' %}
+          {% set entity = 'timer.cycle' + (cycle | string) + '_zone_duration' %}
           {{ is_state(entity , 'idle') }}
 
       - service: switch.turn_off
@@ -483,7 +481,7 @@ script:
 
       #=== Be sure the current zone switch is off
       - wait_template: >
-          {% set entity = 'switch.zone' + zone + '_valve' %}
+          {% set entity = 'switch.zone' + (zone | string) + '_valve' %}
           {{ is_state(entity , 'off') }}
 
 
@@ -498,15 +496,15 @@ script:
         data_template:
           entity_id: input_datetime.cycle{{ cycle }}_next_run_time
           date: >
-            {% if states('input_select.cycle' + cycle + '_watering_days') == 'Daily' %}
+            {% if states('input_select.cycle' + (cycle | string) + '_watering_days') == 'Daily' %}
               {{ (as_timestamp(now() ) + 24 * 3600 ) | timestamp_custom("%Y-%m-%d") }}
-            {% elif states('input_select.cycle' + cycle + '_watering_days') == 'Alternate' %}  
+            {% elif states('input_select.cycle' + (cycle | string) + '_watering_days') == 'Alternate' %}  
               {{ (as_timestamp(now() ) + 48 * 3600 ) | timestamp_custom("%Y-%m-%d") }}
             {% else %}
-              {{ states('input_datetime.cycle' + cycle + '_next_run_time').split(' ')[0] }}
+              {{ states('input_datetime.cycle' + (cycle | string) + '_next_run_time').split(' ')[0] }}
             {% endif %}
           time: >
-            {{ states('input_select.cycle' + cycle + '_schedule_time') }}
+            {{ states('input_select.cycle' + (cycle | string) + '_schedule_time') }}
 
 
   #========================================================================
@@ -528,7 +526,7 @@ script:
         data_template:
           topic: >
             {% if zone in ['1', '2', '3', '4'] %}
-              {% set sonoff = 'sonoff4ch01' %}
+              {% set sonoff = 'garden' %}
             {% elif zone == '5' %}
               {% set sonoff = 'sonoff06' %}
               {% set zone = zone | int - 4 %}
@@ -536,9 +534,9 @@ script:
   
             {{ sonoff }}/cmnd/pulsetime{{ zone | string}}
           payload: >
-            {% set duration = states('input_number.cycle' + cycle + '_zone' + zone + '_duration')  | float %}
-            {% set adj_duration = states('input_number.adjusted_cycle' + cycle + '_zone' + zone + '_duration')  | float %}
-            {% if is_state('input_boolean.cycle' + cycle + '_use_weather_adjustment', 'on') %}
+            {% set duration = states('input_number.cycle' + (cycle | string) + '_zone' + (zone | string) + '_duration')  | float %}
+            {% set adj_duration = states('input_number.adjusted_cycle' + (cycle | string) + '_zone' + (zone | string) + '_duration')  | float %}
+            {% if is_state('input_boolean.cycle' + (cycle | string) + '_use_weather_adjustment', 'on') %}
               {% set payload = 100 + (adj_duration * 60) + 30 %}
             {% else %}
               {% set payload = 100 + (duration * 60) + 30 %}
